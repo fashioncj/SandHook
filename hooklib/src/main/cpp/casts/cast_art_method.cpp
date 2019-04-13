@@ -113,7 +113,7 @@ namespace SandHook {
             }
             int offset = findOffset(p, getParentSize(), 2, accessFlag);
             if (offset < 0) {
-                if (SDK_INT >= ANDROID_Q) {
+                if (SDK_INT >= ANDROID_N) {
                     return 4;
                 } else if (SDK_INT == ANDROID_L2) {
                     return 20;
@@ -128,9 +128,11 @@ namespace SandHook {
         }
     };
 
-    class CastShadowClass : public IMember<art::mirror::ArtMethod, void*> {
+    class CastShadowClass : public IMember<art::mirror::ArtMethod, GCRoot> {
     protected:
         Size calOffset(JNIEnv *jniEnv, mirror::ArtMethod *p) override {
+            if (SDK_INT < ANDROID_N)
+                return getParentSize() + 1;
             return 0;
         }
     };
@@ -237,7 +239,7 @@ namespace SandHook {
     ArrayMember<art::mirror::ArtMethod, void *> *CastArtMethod::dexCacheResolvedMethods = nullptr;
     IMember<art::mirror::ArtMethod, uint32_t> *CastArtMethod::dexMethodIndex = nullptr;
     IMember<art::mirror::ArtMethod, uint32_t> *CastArtMethod::accessFlag = nullptr;
-    IMember<art::mirror::ArtMethod, void*> *CastArtMethod::declaringClass = nullptr;
+    IMember<art::mirror::ArtMethod, GCRoot> *CastArtMethod::declaringClass = nullptr;
     void *CastArtMethod::quickToInterpreterBridge = nullptr;
     void *CastArtMethod::genericJniStub = nullptr;
     void *CastArtMethod::staticResolveStub = nullptr;

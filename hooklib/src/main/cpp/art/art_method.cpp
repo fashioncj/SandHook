@@ -28,6 +28,8 @@ void ArtMethod::disableInterpreterForO() {
 }
 
 void ArtMethod::disableCompilable() {
+    if (SDK_INT < ANDROID_N)
+        return;
     uint32_t accessFlag = getAccessFlags();
     if (SDK_INT >= ANDROID_O2) {
         accessFlag |= 0x02000000;
@@ -107,7 +109,7 @@ void* ArtMethod::getInterpreterCodeEntry() {
     return CastArtMethod::entryPointFormInterpreter->get(this);
 }
 
-void* ArtMethod::getDeclaringClassPtr() {
+GCRoot ArtMethod::getDeclaringClass() {
     return CastArtMethod::declaringClass->get(this);
 }
 
@@ -130,7 +132,7 @@ void ArtMethod::setDexCacheResolveItem(uint32_t index, void* item) {
     CastArtMethod::dexCacheResolvedMethods->setElement(this, index, item);
 }
 
-void ArtMethod::setDeclaringClassPtr(void *classPtr) {
+void ArtMethod::setDeclaringClass(GCRoot classPtr) {
     CastArtMethod::declaringClass->set(this, classPtr);
 }
 

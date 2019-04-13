@@ -23,16 +23,14 @@ import de.robv.android.xposed.XposedBridge;
 
 public final class DynamicBridge {
 
-    private static final HashMap<Member, Method> hookedInfo = new HashMap<>();
     private static HookMaker hookMaker = XposedCompat.useNewCallBackup ? new HookerDexMakerNew() : new HookerDexMaker();
     private static final AtomicBoolean dexPathInited = new AtomicBoolean(false);
     private static File dexDir;
 
-    public static Map<Member,HookMethodEntity> entityMap = new HashMap<>();
-
-    public static void onForkPost() {
-        dexPathInited.set(false);
-    }
+    //use internal stubs
+    private final static Map<Member,HookMethodEntity> entityMap = new HashMap<>();
+    //use dex maker
+    private final static HashMap<Member, Method> hookedInfo = new HashMap<>();
 
     public static synchronized void hookMethod(Member hookMethod, XposedBridge.AdditionalHookInfo additionalHookInfo) {
 
@@ -60,7 +58,7 @@ public final class DynamicBridge {
             long timeStart = System.currentTimeMillis();
             HookMethodEntity stub = null;
             if (XposedCompat.useInternalStub) {
-                stub = HookStubManager.getHookMethodEntity(hookMethod);
+                stub = HookStubManager.getHookMethodEntity(hookMethod, additionalHookInfo);
             }
             if (stub != null) {
                 SandHook.hook(new HookWrapper.HookEntity(hookMethod, stub.hook, stub.backup, false));
@@ -70,9 +68,9 @@ public final class DynamicBridge {
                         XposedCompat.classLoader, dexDir == null ? null : dexDir.getAbsolutePath());
                 hookedInfo.put(hookMethod, hookMaker.getCallBackupMethod());
             }
-            DexLog.d("hook method <" + hookMethod.toString() + "> cost " + (System.currentTimeMillis() - timeStart) + " ms, by " + (stub != null ? "internal stub." : "dex maker"));
+            DexLog.d("hook method <" + hookMethod.toString() + "> cost " + (System.currentTimeMillis() - timeStart) + " ms, by " + (stub != null ? "internal stub" : "dex maker"));
             Trace.endSection();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             DexLog.e("error occur when hook method <" + hookMethod.toString() + ">", e);
         }
     }
@@ -104,33 +102,6 @@ public final class DynamicBridge {
         } else {
             DexLog.e("Only methods and constructors can be hooked: " + member.toString());
             return false;
-        }
-    }
-
-    public static Object invokeOriginalMethod(Member method, Object thisObject, Object[] args)
-            throws Throwable {
-        Method callBackup = hookedInfo.get(method);
-        if (callBackup == null) {
-            //method hook use internal stub
-            return SandHook.callOriginMethod(method, thisObject, args);
-        }
-        if (!Modifier.isStatic(callBackup.getModifiers())) {
-            throw new IllegalStateException("original method is not static, something must be wrong!");
-        }
-        callBackup.setAccessible(true);
-        if (args == null) {
-            args = new Object[0];
-        }
-        final int argsSize = args.length;
-        if (Modifier.isStatic(method.getModifiers())) {
-            return callBackup.invoke(null, args);
-        } else {
-            Object[] newArgs = new Object[argsSize + 1];
-            newArgs[0] = thisObject;
-            for (int i = 1; i < newArgs.length; i++) {
-                newArgs[i] = args[i - 1];
-            }
-            return callBackup.invoke(null, newArgs);
         }
     }
 }
